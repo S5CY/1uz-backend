@@ -6,10 +6,10 @@ Stores story choices, question-room answers, and progress for the `1uz♡` game.
 
 - `POST /api/events` — records a choice or written answer.
 - `POST /api/progress` — saves the latest progress snapshot for an ID.
-- `GET /api/admin/events` — private answer history, optionally filtered by `storyId`.
-- `GET /api/admin/progress` — private progress list.
-- `/admin` — simple private dashboard displaying `ID [x]: answer` records.
-- Origin checks, input length limits, prepared SQL statements, and an admin bearer token.
+- `GET /api/admin/events` — public answer history, optionally filtered by `storyId`.
+- `GET /api/admin/progress` — public progress list.
+- `/answers` — public dashboard displaying `ID [x]: answer` records without a password.
+- Origin checks, input length limits, and prepared SQL statements.
 
 ## First-time setup
 
@@ -33,24 +33,16 @@ Stores story choices, question-room answers, and progress for the `1uz♡` game.
 
 4. Copy the returned database ID into `wrangler.jsonc` in place of the all-zero placeholder ID.
 
-5. Create a strong admin token and store it as a Worker secret:
-
-   ```bash
-   npx wrangler secret put ADMIN_TOKEN
-   ```
-
-6. Create the tables and deploy:
+5. Create the tables and deploy:
 
    ```bash
    npm run db:remote
    npm run deploy
    ```
 
-7. Copy the deployed Worker URL into `js/config.js` in the frontend repository.
+6. Copy the deployed Worker URL into `js/config.js` in the frontend repository.
 
 ## Local development
-
-Copy `.dev.vars.example` to `.dev.vars`, replace its example token, then run:
 
 ```bash
 npm install
@@ -58,7 +50,7 @@ npm run db:local
 npm run dev
 ```
 
-Do not commit `.dev.vars`, your admin token, Cloudflare credentials, or any private key. The public frontend never receives the admin token.
+Do not commit Cloudflare credentials or any private key.
 
 ## Data shape
 
@@ -77,4 +69,4 @@ An answer event stores:
 }
 ```
 
-Anyone who knows a story ID can submit under it, because the game intentionally does not use accounts or passwords. The admin dashboard is still private. If stronger identity is needed later, add email or passkey authentication before treating IDs as proof of identity.
+Anyone who knows a story ID can submit under it, because the game intentionally does not use accounts or passwords. The `/answers` dashboard is public, so anyone with its URL can read the stored answers.

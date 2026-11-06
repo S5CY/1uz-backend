@@ -18,11 +18,6 @@ function corsHeaders(request, env) {
   };
 }
 
-function isAdmin(request, env) {
-  const auth = request.headers.get("authorization") || "";
-  return Boolean(env.ADMIN_TOKEN) && auth === `Bearer ${env.ADMIN_TOKEN}`;
-}
-
 async function readBody(request) {
   const type = request.headers.get("content-type") || "";
   if (!type.includes("application/json")) throw new Error("JSON_REQUIRED");
@@ -85,7 +80,6 @@ async function saveProgress(request, env, headers) {
 }
 
 async function listEvents(request, env, headers) {
-  if (!isAdmin(request, env)) return json({ error: "Unauthorized" }, 401, headers);
   const url = new URL(request.url);
   const storyId = clean(url.searchParams.get("storyId"), 64);
   const limit = Math.max(1, Math.min(500, Number(url.searchParams.get("limit")) || 200));
@@ -97,13 +91,16 @@ async function listEvents(request, env, headers) {
 }
 
 async function listProgress(request, env, headers) {
-  if (!isAdmin(request, env)) return json({ error: "Unauthorized" }, 401, headers);
   const { results } = await env.DB.prepare("SELECT * FROM progress_snapshots ORDER BY updated_at DESC LIMIT 500").all();
   return json({ saves: results }, 200, headers);
 }
 
 function adminPage() {
   return new Response(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>1u Answers</title><style>body{margin:0;background:#f5f0ff;color:#43335f;font:15px system-ui}main{max-width:1000px;margin:auto;padding:28px}header{display:flex;gap:10px;flex-wrap:wrap}input,button{padding:11px 14px;border:1px solid #c9b9df;border-radius:12px;background:white}button{background:#8268b3;color:white;font-weight:700}article{margin:14px 0;padding:16px;border-radius:16px;background:white;box-shadow:0 8px 24px #6d56931c}small{color:#8a779f}.answer{font-size:18px;color:#b44f87}</style><main><h1>1u · 回答记录</h1><header><input id="token" type="password" placeholder="Admin token"><input id="story" placeholder="按 ID 筛选"><button id="load">查看</button></header><p id="status"></p><section id="list"></section></main><script>const q=s=>document.querySelector(s);q('#load').onclick=async()=>{q('#status').textContent='载入中…';const token=q('#token').value;const story=q('#story').value.trim();sessionStorage.setItem('1u-admin-token',token);const r=await fetch('/api/admin/events?limit=500'+(story?'&storyId='+encodeURIComponent(story):''),{headers:{authorization:'Bearer '+token}});if(!r.ok){q('#status').textContent='无法读取，请检查 token';return}const d=await r.json();q('#status').textContent=d.events.length+' 条记录';q('#list').innerHTML=d.events.map(e=>'<article><b>ID ['+esc(e.story_id)+'] · '+esc(e.scene)+'</b><p>'+esc(e.prompt)+'</p><p class="answer">'+esc(e.answer)+'</p><small>'+esc(e.created_at)+'</small></article>').join('')||'<article>暂时没有记录</article>'};function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}q('#token').value=sessionStorage.getItem('1u-admin-token')||'';</script></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
+
+function answersPage() {
+  return new Response(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>1u 回答记录</title><style>body{margin:0;background:#f5f0ff;color:#43335f;font:15px system-ui}main{max-width:900px;margin:auto;padding:28px}header{display:flex;gap:10px;flex-wrap:wrap}input,button{padding:11px 14px;border:1px solid #c9b9df;border-radius:12px;background:white}button{background:#8268b3;color:white;font-weight:700}article{margin:14px 0;padding:16px;border-radius:16px;background:white;box-shadow:0 8px 24px #6d56931c}small{color:#8a779f}.answer{font-size:18px;color:#b44f87}</style><main><h1>1u · 回答记录</h1><header><input id="story" placeholder="输入 ID 筛选"><button id="load">查看</button></header><p id="status">载入中…</p><section id="list"></section></main><script>const q=s=>document.querySelector(s);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));async function load(){const story=q('#story').value.trim();q('#status').textContent='载入中…';const r=await fetch('/api/admin/events?limit=500'+(story?'&storyId='+encodeURIComponent(story):''));if(!r.ok){q('#status').textContent='暂时无法读取';return}const d=await r.json();q('#status').textContent=d.events.length+' 条记录';q('#list').innerHTML=d.events.map(e=>'<article><b>ID ['+esc(e.story_id)+'] · '+esc(e.scene)+'</b><p>'+esc(e.prompt)+'</p><p class="answer">'+esc(e.answer)+'</p><small>'+esc(e.created_at)+'</small></article>').join('')||'<article>暂时没有记录</article>'}q('#load').onclick=load;load();</script></html>`, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
 export default {
@@ -117,6 +114,7 @@ export default {
       if (request.method === "POST" && url.pathname === "/api/progress") return saveProgress(request, env, headers);
       if (request.method === "GET" && url.pathname === "/api/admin/events") return listEvents(request, env, headers);
       if (request.method === "GET" && url.pathname === "/api/admin/progress") return listProgress(request, env, headers);
+      if (request.method === "GET" && url.pathname === "/answers") return answersPage();
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/admin")) return adminPage();
       return json({ error: "Not found" }, 404, headers);
     } catch (error) {
