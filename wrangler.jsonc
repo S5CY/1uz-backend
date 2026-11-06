@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "1uz-backend",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-05",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "1uz-answers",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://s5cy.github.io"
+  }
+}

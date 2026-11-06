@@ -1,0 +1,16 @@
+{
+  "name": "1uz-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute DB --local --file=schema.sql",
+    "db:remote": "wrangler d1 execute DB --remote --file=schema.sql",
+    "check": "node --check src/index.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
